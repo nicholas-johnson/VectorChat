@@ -5,44 +5,70 @@ import tkinter as tk
 
 from action_list import ActionList
 from action import Action
-from action_list_watcher import ActionListWatcher
+# from action_list_watcher import ActionListWatcher
 from recorder_window import RecorderWindow
 from whisper_asr import WhisperASR 
-from chat_completion import chat_completion
-from text_conversation import TextConversation
+from chat_completion import ChatCompletion
+from conversation import Conversation
+from action_factory import ActionFactory
+from vector_controller import VectorController
+from audio_recorder import AudioRecorder
 
 def create_app():
-    whisper_asr = WhisperASR()
-    conversation = TextConversation()
-    controller = VectorController()
-    controller.connect()
-
     def on_transcription_ready(transcript):
-        print(transcript['text'])
-        conversation.add_message('USER: ' + transcript['text'])
-        print(conversation.get_convo())
-        completion = chat_completion(conversation.get_convo())
-        answer = completion.choices[0].message.content
-        print(answer)
-        # action = Action(answer)
-        # action_list.add_action(action)
+        print(transcript)
+        conversation.add_message_from_user(transcript)
+        # print(conversation.get_convo())
+
+    def on_chat_completion(completion):
+        conversation.add_message_from_ai(completion)
+
+    def on_message_from_user(message):
+        recorder_window.log(conversation.get_log())
+        chat_completion.complete(conversation.get_convo())
+
+    def on_input_from_sensor(message):
+        recorder_window.log(conversation.get_log())
+
+    def on_message_from_ai(message):
+        recorder_window.log(conversation.get_log())
+        actions = ActionFactory.create_actions(message)
+        action_list.add_actions(actions)
 
     def on_recording_ready(file_path):
-        # Send the recorded file to the OpenAI Whisper API to convert it to text
-        # This is a placeholder for the actual API call
-        # Replace it with the appropriate API call to obtain the transcript
-        
-        transcription = whisper_asr.transcribe(file_path)
-        print(f"Transcription: {transcription}")
-        on_transcription_ready(transcription)
+        transcriber.transcribe(file_path)
+
+    def on_start_recording():
+        audio_recorder.start()
+
+    def on_stop_recording():
+        audio_recorder.stop()
+
+    def on_close():
+        audio_recorder.destroy()
+        robot.stop();
+        # robot.disconnect()
+        print('closeing app')
+
+    # action_list_watcher = ActionListWatcher(action_list, callback=lambda action: print(f"Executing action: {action.description}"))
+
 
     action_list = ActionList()
-    action_list_watcher = ActionListWatcher(action_list, callback=lambda action: print(f"Executing action: {action.description}"))
-    recorder_window = RecorderWindow(callback=on_recording_ready)
+    audio_recorder = AudioRecorder(on_recording_ready)
+    transcriber = WhisperASR(on_transcription_ready)
+    conversation = Conversation(on_message_from_user, on_input_from_sensor, on_message_from_ai)
+    chat_completion = ChatCompletion(on_chat_completion)
 
+
+    robot = VectorController(action_list)
+    robot.connect()
+    robot.run()
+
+    # Launch the UI
+    recorder_window = RecorderWindow(on_start_recording, on_stop_recording, on_close)
     recorder_window.run()
-    action_list_watcher.stop()
 
+    # action_list_watcher.stop()
 
 if __name__ == "__main__":
     create_app()

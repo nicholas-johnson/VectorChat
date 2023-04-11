@@ -1,67 +1,85 @@
 import anki_vector
-from anki_vector.events import Events
 from anki_vector.util import degrees
 import threading
-
-
-class TalkAction:
-    def __init__(self, message):
-        self.message = message
-
-
-class EmoteAction:
-    def __init__(self, angle):
-        self.angle = angle
-
+from time import sleep
+from action_list import ActionList
+from action import TalkAction, EmoteAction
 
 class VectorController:
-    def __init__(self):
+    def __init__(self, action_list, check_interval=0.1):
         self.vector = None
         self._lock = threading.Lock()
+        self.action_list = action_list
+        self._stop_event = threading.Event()
+        self.check_interval = check_interval
 
-    def connect(self):
+    def connect(self, max_retries=5):
+        retries = 0
+
         with self._lock:
-            self.vector = anki_vector.AsyncRobot()
-            self.vector.connect()
+            while retries < max_retries:
+                try:
+                    self.vector = anki_vector.Robot()
+                    self.vector.connect()
+                    break
+                except:
+                    retries += 1
+                    print(f"Connection attempt {retries} failed. Retrying...")
+
+            if retries == max_retries:
+                print("Maximum retries reached. Connection failed.")
+
+        print(self.vector.anim.anim_trigger_list)
 
     def disconnect(self):
-        with self._lock:
-            if self.vector:
-                self.vector.disconnect()
-                self.vector = None
+        if self.vector:
+            self.vector.disconnect()
+            self.vector = None
 
-    async def talk(self, message):
-        with self._lock:
-            if self.vector:
-                await self.vector.behavior.say_text(message)
+    def run(self):
+        self._watcher_thread = threading.Thread(target=self._run)
+        self._watcher_thread.start()
 
-    async def emote(self, angle):
-        with self._lock:
-            if self.vector:
-                await self.vector.behavior.set_head_angle(degrees(angle))
+    def _run(self,):
+        while not self._stop_event.is_set():
+            with self._lock:
+                action = self.action_list.get_next_action()
+                if action:
+                    self.act(action)
 
-    async def act(self, action):
+            sleep(self.check_interval)
+
+    
+    def stop(self):
+        self._stop_event.set()
+        self._watcher_thread.join()
+
+    def talk(self, message):
+        if self.vector:
+            self.vector.behavior.say_text(message)
+
+    def emote(self, emotion):
+        if self.vector:
+            anim_name = "GreetAfterLongTime"
+            self.vector.anim.play_animation_trigger(anim_name)
+
+    def act(self, action):
         if isinstance(action, TalkAction):
-            await self.talk(action.message)
+            self.talk(action.message)
         elif isinstance(action, EmoteAction):
-            await self.emote(action.angle)
-
-
-# Example usage:
-async def main():
-    controller = VectorController()
-    controller.connect()
-
-    talk_action = TalkAction("Hello, I am Vector!")
-    emote_action = EmoteAction(45)
-
-    await controller.act(talk_action)
-    await controller.act(emote_action)
-
-    controller.disconnect()
+            self.emote(action.emotion)
 
 
 if __name__ == "__main__":
-    import asyncio
+    action_list = ActionList()
+    action_list.add_action(TalkAction("Hello, I am Vector!"))
 
-    asyncio.run(main())
+    controller = VectorController(action_list)
+    controller.connect()
+    controller.run()
+
+    action_list.add_action(TalkAction("I am Happy!"))
+    action_list.add_action(EmoteAction('happy'))
+
+    # controller.stop()
+    # controller.disconnect()

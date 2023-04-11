@@ -17,7 +17,7 @@ def main():
     conversation = ''
     
     with anki_vector.Robot(args.serial) as robot:
-        prompt = "What's your favourite food?"
+        prompt = "What is transpiration?"
         conversation = conversation + "\n\n" +  prompt
         answer = getData(prompt)
         conversation = conversation + "\n\n" + answer

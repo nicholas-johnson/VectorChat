@@ -5,7 +5,8 @@ import wave
 import time
 
 class AudioRecorder:
-    def __init__(self, output_filename="output.wav", channels=1, rate=44100, chunk=1024, dtype='int16'):
+    def __init__(self, on_recording_ready, output_filename="output.wav", channels=1, rate=44100, chunk=1024, dtype='int16'):
+        self.on_recording_ready = on_recording_ready
         self.output_filename = output_filename
         self.channels = channels
         self.rate = rate
@@ -24,6 +25,13 @@ class AudioRecorder:
         if self._is_recording:
             self._buffer = np.concatenate((self._buffer, indata))
 
+    def _save_wav(self):
+        with wave.open(self.output_filename, "wb") as wf:
+            wf.setnchannels(self.channels)
+            wf.setsampwidth(self._buffer.dtype.itemsize)
+            wf.setframerate(self.rate)
+            wf.writeframes(self._buffer.tobytes())
+
     def start(self):
         if not self._is_recording:
             self._buffer = np.zeros((0, self.channels), dtype=self.dtype)
@@ -36,16 +44,19 @@ class AudioRecorder:
             self._is_recording = False
             self._recording_thread.join()
             self._save_wav()
+            self.on_recording_ready(self.output_filename)
 
-    def _save_wav(self):
-        with wave.open(self.output_filename, "wb") as wf:
-            wf.setnchannels(self.channels)
-            wf.setsampwidth(self._buffer.dtype.itemsize)
-            wf.setframerate(self.rate)
-            wf.writeframes(self._buffer.tobytes())
+    def destroy(self):
+        if self._is_recording:
+            self._is_recording = False
+            self._recording_thread.join()
 
-# Example usage:
-recorder = AudioRecorder()
-recorder.start()
-time.sleep(1)  # Pause for one second
-recorder.stop()
+if __name__ == "__main__":
+    def callback(filename):
+        print("saved to ", filename)
+
+    recorder = AudioRecorder(callback)
+
+    recorder.start()
+    time.sleep(5)  # Pause for one second
+    recorder.stop()
