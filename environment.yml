@@ -1,0 +1,13 @@
+name: vector_chat3
+channels:
+  - defaults
+dependencies:
+  - python=3.8
+  - pip:
+      - anki_vector
+      - openai
+      - protobuf==3.20.1
+      - cffi >= 1.15.1=*_3
+      - numpy
+      - pandas
+      - sounddevice

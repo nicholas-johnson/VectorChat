@@ -22,14 +22,14 @@ class VectorController:
                     self.vector = anki_vector.Robot()
                     self.vector.connect()
                     break
-                except:
+                except Exception as e:
                     retries += 1
+                    print("Failed to connect to Vector because:", e)
                     print(f"Connection attempt {retries} failed. Retrying...")
+                    print('..........')
 
             if retries == max_retries:
                 print("Maximum retries reached. Connection failed.")
-
-        print(self.vector.anim.anim_trigger_list)
 
     def disconnect(self):
         if self.vector:

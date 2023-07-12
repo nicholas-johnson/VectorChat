@@ -1,7 +1,6 @@
 import openai
 import threading
-
-OPENAI_API_KEY = "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"
+from config import OPENAI_API_KEY
 
 class WhisperASR:
     def __init__(self, on_transcription_complete):

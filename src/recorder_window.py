@@ -9,13 +9,13 @@ class RecorderWindow:
         self.on_close = on_close
         
         self.window = tk.Tk()
-        self.window.title("Audio Recorder")
-        self.window.geometry("400x200")
+        self.window.title("Vector Chat")
+        self.window.geometry("600x400")
 
-        self.record_button = tk.Button(self.window, text="Start Recording", command=self.toggle_recording)
+        self.record_button = tk.Button(self.window, text="Talk to Vector", command=self.toggle_recording)
         self.record_button.pack(pady=20)
 
-        self.text = tk.Text(self.window, state='disabled', wrap="word", width=200, height=200)
+        self.text = tk.Text(self.window, state='disabled', wrap="word", width=400, height=400)
         self.text.pack(padx=20, pady=20)
         self.log('...')
 
@@ -23,11 +23,11 @@ class RecorderWindow:
 
     def toggle_recording(self):
         if not self.is_recording:
-            self.record_button.config(text="Stop Recording")
+            self.record_button.config(text="Stop Talking")
             self.is_recording = True
             self.on_start_recording()
         else:
-            self.record_button.config(text="Start Recording")
+            self.record_button.config(text="Talk to Vector")
             self.is_recording = False
             self.on_stop_recording()
 

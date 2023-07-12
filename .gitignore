@@ -1,2 +1,5 @@
 .DS_Store
 __pycache__
+
+src/config.py
+output.wav
